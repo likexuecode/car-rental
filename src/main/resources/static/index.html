@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>首页 - 汽车租赁管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="nav" id="nav"></div>
+
+  <div class="container">
+    <div id="notices"></div>
+
+    <div class="card">
+      <div class="row">
+        <select id="filter-type" onchange="loadVehicles()" style="width:150px">
+          <option value="">全部车型</option>
+        </select>
+        <input id="filter-keyword" placeholder="搜索车辆名称 / 编号 / 品牌" style="width:260px"
+               onkeydown="if(event.key==='Enter')loadVehicles()">
+        <label class="row muted" style="gap:6px">
+          <input type="checkbox" id="filter-available" onchange="loadVehicles()" checked> 只看可租
+        </label>
+        <button class="btn" onclick="loadVehicles()">搜索</button>
+        <button class="btn gray" onclick="resetFilter()">重置</button>
+      </div>
+    </div>
+
+    <h2 class="page-title">可租赁车辆</h2>
+    <div id="vehicle-list" class="vehicle-grid"></div>
+  </div>
+
+  <!-- 车辆详情 / 下单 -->
+  <div class="mask" id="modal-detail" onclick="if(event.target===this)closeModal('modal-detail')">
+    <div class="modal">
+      <h3 id="detail-title">车辆详情</h3>
+      <div id="detail-body"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    let currentVehicle = null;
+
+    if (!Auth.requireLogin()) { /* 未登录跳转 */ }
+    renderNav('index.html');
+    loadTypes();
+    loadNotices();
+    loadVehicles();
+
+    async function loadTypes() {
+      try {
+        const types = await api.get('/api/vehicle-types');
+        document.getElementById('filter-type').innerHTML =
+          '<option value="">全部车型</option>' +
+          types.map(t => `<option value="${t.id}">${escapeHtml(t.typeName)}</option>`).join('');
+      } catch (e) { /* 公开接口异常时忽略 */ }
+    }
+
+    async function loadNotices() {
+      try {
+        const list = await api.get('/api/announcements');
+        if (!list.length) return;
+        document.getElementById('notices').innerHTML = list.slice(0, 3).map(n => `
+          <div class="notice">
+            <h4>${escapeHtml(n.title)}</h4>
+            <p>${escapeHtml(n.content || '')}</p>
+            <div class="time">${fmt(n.createTime)}</div>
+          </div>`).join('');
+      } catch (e) { /* 忽略 */ }
+    }
+
+    async function loadVehicles() {
+      const typeId = document.getElementById('filter-type').value;
+      const keyword = document.getElementById('filter-keyword').value.trim();
+      const onlyAvailable = document.getElementById('filter-available').checked;
+      const params = new URLSearchParams();
+      if (typeId) params.set('typeId', typeId);
+      if (keyword) params.set('keyword', keyword);
+      params.set('onlyAvailable', onlyAvailable);
+
+      const box = document.getElementById('vehicle-list');
+      try {
+        const list = await api.get('/api/vehicles?' + params.toString());
+        if (!list.length) {
+          box.innerHTML = '<div class="empty" style="grid-column:1/-1">没有找到符合条件的车辆</div>';
+          return;
+        }
+        box.innerHTML = list.map(v => `
+          <div class="vehicle-card" onclick="showDetail(${v.id})">
+            <div class="vehicle-thumb">
+              ${v.image ? `<img src="${escapeHtml(v.image)}" alt="${escapeHtml(v.vehicleName)}">`
+                        : escapeHtml(v.brand || '车辆')}
+            </div>
+            <div class="vehicle-body">
+              <h4>${escapeHtml(v.vehicleName)}</h4>
+              <div class="vehicle-meta">
+                ${escapeHtml(v.typeName || '-')} · ${v.seats || '-'}座 · ${escapeHtml(v.plateNo || '-')}
+              </div>
+              <div class="row" style="justify-content:space-between">
+                <div class="vehicle-price">${money(v.dailyPrice)}<small> / 天</small></div>
+                <span class="tag ${v.stock > 0 ? 'green' : 'red'}">${v.stock > 0 ? '库存 ' + v.stock : '已租罄'}</span>
+              </div>
+            </div>
+          </div>`).join('');
+      } catch (e) {
+        fail(e);
+      }
+    }
+
+    function resetFilter() {
+      document.getElementById('filter-type').value = '';
+      document.getElementById('filter-keyword').value = '';
+      document.getElementById('filter-available').checked = true;
+      loadVehicles();
+    }
+
+    async function showDetail(id) {
+      try {
+        const v = await api.get('/api/vehicles/' + id);
+        currentVehicle = v;
+        document.getElementById('detail-title').textContent = v.vehicleName;
+        document.getElementById('detail-body').innerHTML = `
+          <div class="detail-row"><span>车辆编号</span><span>${escapeHtml(v.vehicleNo)}</span></div>
+          <div class="detail-row"><span>品牌 / 车型</span><span>${escapeHtml(v.brand || '-')} / ${escapeHtml(v.typeName || '-')}</span></div>
+          <div class="detail-row"><span>车牌号</span><span>${escapeHtml(v.plateNo || '-')}</span></div>
+          <div class="detail-row"><span>座位数</span><span>${v.seats || '-'} 座</span></div>
+          <div class="detail-row"><span>日租价</span><span style="color:#dc2626;font-weight:700">${money(v.dailyPrice)} / 天</span></div>
+          <div class="detail-row"><span>当前库存</span><span>${v.stock}</span></div>
+          <div class="detail-row"><span>租车地址</span><span>${escapeHtml(v.address || '-')}</span></div>
+          <div class="detail-row"><span>联系电话</span><span>${escapeHtml(v.phone || '-')}</span></div>
+          <div class="detail-row"><span>车辆介绍</span><span style="max-width:60%;text-align:right">${escapeHtml(v.description || '-')}</span></div>
+          <div class="form-grid" style="margin-top:18px">
+            <label class="field">租车天数
+              <input id="rent-days" type="number" min="1" value="1" oninput="calcAmount()">
+            </label>
+            <label class="field">取车时间
+              <input id="rent-start" type="datetime-local">
+            </label>
+            <div class="full muted" style="font-size:13px">
+              预计金额：<span id="rent-amount" style="color:#dc2626;font-weight:700">${money(v.dailyPrice)}</span>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn gray" onclick="closeModal('modal-detail')">取消</button>
+            <button class="btn" onclick="createOrder()" ${v.stock > 0 ? '' : 'disabled'}>
+              ${v.stock > 0 ? '立即租赁' : '已租罄'}
+            </button>
+          </div>`;
+        document.getElementById('rent-start').value = nowLocal();
+        openModal('modal-detail');
+      } catch (e) {
+        fail(e);
+      }
+    }
+
+    function calcAmount() {
+      if (!currentVehicle) return;
+      const days = parseInt(document.getElementById('rent-days').value || '0', 10);
+      const amount = days > 0 ? currentVehicle.dailyPrice * days : 0;
+      document.getElementById('rent-amount').textContent = money(amount);
+    }
+
+    async function createOrder() {
+      const days = parseInt(document.getElementById('rent-days').value || '0', 10);
+      const startTime = document.getElementById('rent-start').value;
+      if (!days || days <= 0) return toast('请输入有效的租车天数', true);
+      if (!startTime) return toast('请选择取车时间', true);
+      try {
+        await api.post('/api/orders', { vehicleId: currentVehicle.id, days, startTime });
+        closeModal('modal-detail');
+        toast('下单成功，请前往我的订单支付');
+        setTimeout(() => location.href = 'orders.html', 700);
+      } catch (e) {
+        fail(e);
+      }
+    }
+  </script>
+</body>
+</html>

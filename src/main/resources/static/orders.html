@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的订单 - 汽车租赁管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="nav" id="nav"></div>
+
+  <div class="container">
+    <h2 class="page-title">我的订单</h2>
+
+    <div class="card">
+      <div class="row">
+        <select id="filter-status" onchange="loadOrders()" style="width:160px">
+          <option value="">全部状态</option>
+          <option value="待支付">待支付</option>
+          <option value="已取车">已取车</option>
+          <option value="归还审核中">归还审核中</option>
+          <option value="已完成">已完成</option>
+        </select>
+        <button class="btn gray" onclick="loadOrders()">刷新</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>订单列表</h3>
+      <div id="order-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>我的续租申请</h3>
+      <div id="renewal-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>我的归还记录</h3>
+      <div id="return-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>我的补费</h3>
+      <div id="penalty-list"></div>
+    </div>
+  </div>
+
+  <!-- 续租弹窗 -->
+  <div class="mask" id="modal-renew" onclick="if(event.target===this)closeModal('modal-renew')">
+    <div class="modal">
+      <h3>申请续租</h3>
+      <div class="form-grid">
+        <label class="field">续租天数
+          <input id="renew-days" type="number" min="1" value="1">
+        </label>
+        <label class="field">续租开始时间
+          <input id="renew-start" type="datetime-local">
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn gray" onclick="closeModal('modal-renew')">取消</button>
+        <button class="btn" onclick="submitRenewal()">提交申请</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 归还弹窗 -->
+  <div class="mask" id="modal-return" onclick="if(event.target===this)closeModal('modal-return')">
+    <div class="modal">
+      <h3>车辆归还登记</h3>
+      <label class="field" style="margin-bottom:12px">归还时间
+        <input id="return-time" type="datetime-local">
+      </label>
+      <div class="form-grid">
+        <label class="field">是否破损
+          <select id="return-damaged"><option value="否">否</option><option value="是">是</option></select>
+        </label>
+        <label class="field">汽油是否超出约定
+          <select id="return-fuel"><option value="否">否</option><option value="是">是</option></select>
+        </label>
+        <label class="field">是否违章
+          <select id="return-violation"><option value="否">否</option><option value="是">是</option></select>
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn gray" onclick="closeModal('modal-return')">取消</button>
+        <button class="btn" onclick="submitReturn()">提交归还</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    if (!Auth.requireLogin()) throw new Error('未登录');
+    renderNav('orders.html');
+    let renewOrderId = null;
+    let returnOrderId = null;
+
+    loadOrders();
+    loadRenewals();
+    loadReturns();
+    loadPenalties();
+
+    async function loadOrders() {
+      const status = document.getElementById('filter-status').value;
+      try {
+        const list = await api.get('/api/orders/my' + (status ? '?status=' + encodeURIComponent(status) : ''));
+        const box = document.getElementById('order-list');
+        if (!list.length) {
+          box.innerHTML = '<div class="empty">暂无订单，去首页选择车辆吧</div>';
+          return;
+        }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>车辆</th><th>租期</th><th>金额</th><th>取车时间</th><th>支付</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>${list.map(o => `
+            <tr>
+              <td>${escapeHtml(o.orderNo)}</td>
+              <td>${escapeHtml(o.vehicleName)}<div class="muted" style="font-size:12px">${escapeHtml(o.plateNo || '')}</div></td>
+              <td>${o.rentDays} 天</td>
+              <td style="color:#dc2626;font-weight:600">${money(o.amount)}</td>
+              <td>${fmt(o.startTime)}</td>
+              <td>${escapeHtml(o.isPaid || '-')}</td>
+              <td>${statusTag(o.status)}</td>
+              <td>${orderActions(o)}</td>
+            </tr>`).join('')}
+          </tbody></table>`;
+      } catch (e) {
+        fail(e);
+      }
+    }
+
+    function orderActions(o) {
+      if (o.status === '待支付') {
+        return `<button class="btn sm" onclick="payOrder(${o.id})">支付</button>`;
+      }
+      if (o.status === '已取车') {
+        return `<button class="btn sm ghost" onclick="openRenew(${o.id})">续租</button>
+                <button class="btn sm gray" onclick="openReturn(${o.id})">归还</button>`;
+      }
+      return '<span class="muted">-</span>';
+    }
+
+    async function payOrder(id) {
+      if (!confirm('确认支付该订单？支付后订单状态变为已取车。')) return;
+      try {
+        await api.post(`/api/orders/${id}/pay`, {});
+        toast('支付成功');
+        loadOrders();
+      } catch (e) {
+        fail(e);
+      }
+    }
+
+    function openRenew(orderId) {
+      renewOrderId = orderId;
+      document.getElementById('renew-days').value = 1;
+      document.getElementById('renew-start').value = nowLocal();
+      openModal('modal-renew');
+    }
+
+    async function submitRenewal() {
+      const days = parseInt(document.getElementById('renew-days').value || '0', 10);
+      const startTime = document.getElementById('renew-start').value;
+      if (!days || days <= 0) return toast('请输入有效的续租天数', true);
+      try {
+        await api.post('/api/renewals', { orderId: renewOrderId, days, startTime });
+        closeModal('modal-renew');
+        toast('续租申请已提交，等待管理员审核');
+        loadRenewals();
+      } catch (e) {
+        fail(e);
+      }
+    }
+
+    function openReturn(orderId) {
+      returnOrderId = orderId;
+      document.getElementById('return-time').value = nowLocal();
+      openModal('modal-return');
+    }
+
+    async function submitReturn() {
+      const body = {
+        orderId: returnOrderId,
+        returnTime: document.getElementById('return-time').value,
+        isDamaged: document.getElementById('return-damaged').value,
+        isFuelExceed: document.getElementById('return-fuel').value,
+        isViolation: document.getElementById('return-violation').value
+      };
+      if (!body.returnTime) return toast('请填写归还时间', true);
+      try {
+        await api.post('/api/returns', body);
+        closeModal('modal-return');
+        toast('归还申请已提交，请等待管理员审核');
+        loadOrders();
+        loadReturns();
+      } catch (e) {
+        fail(e);
+      }
+    }
+
+    async function loadRenewals() {
+      try {
+        const list = await api.get('/api/renewals/my');
+        const box = document.getElementById('renewal-list');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无续租申请</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>车辆</th><th>续租天数</th><th>续租金额</th><th>申请时间</th><th>审核状态</th><th>审核意见</th></tr></thead>
+          <tbody>${list.map(r => `<tr>
+            <td>${escapeHtml(r.orderNo)}</td>
+            <td>${escapeHtml(r.vehicleName)}</td>
+            <td>${r.renewalDays} 天</td>
+            <td>${money(r.amount)}</td>
+            <td>${fmt(r.applyTime)}</td>
+            <td>${statusTag(r.auditStatus)}</td>
+            <td>${escapeHtml(r.auditReply || '-')}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function loadReturns() {
+      try {
+        const list = await api.get('/api/returns/my');
+        const box = document.getElementById('return-list');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无归还记录</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>车辆</th><th>归还时间</th><th>破损</th><th>汽油超出</th><th>违章</th><th>审核状态</th><th>审核回复</th></tr></thead>
+          <tbody>${list.map(r => `<tr>
+            <td>${escapeHtml(r.orderNo)}</td>
+            <td>${escapeHtml(r.vehicleName)}</td>
+            <td>${fmt(r.returnTime)}</td>
+            <td>${escapeHtml(r.isDamaged)}</td>
+            <td>${escapeHtml(r.isFuelExceed)}</td>
+            <td>${escapeHtml(r.isViolation)}</td>
+            <td>${statusTag(r.auditStatus)}</td>
+            <td>${escapeHtml(r.auditReply || '-')}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function loadPenalties() {
+      try {
+        const list = await api.get('/api/penalties/my');
+        const box = document.getElementById('penalty-list');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无补费记录</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>车辆</th><th>标题</th><th>类型</th><th>金额</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>${list.map(p => `<tr>
+            <td>${escapeHtml(p.orderNo)}</td>
+            <td>${escapeHtml(p.vehicleName)}</td>
+            <td>${escapeHtml(p.title)}</td>
+            <td>${escapeHtml(p.type || '-')}</td>
+            <td style="color:#dc2626;font-weight:600">${money(p.fee)}</td>
+            <td>${statusTag(p.isPaid)}</td>
+            <td>${p.isPaid === '未支付'
+                ? `<button class="btn sm" onclick="payPenalty(${p.id})">支付补费</button>`
+                : '<span class="muted">-</span>'}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function payPenalty(id) {
+      if (!confirm('确认支付该笔补费？')) return;
+      try {
+        await api.post(`/api/penalties/${id}/pay`, {});
+        toast('补费支付成功');
+        loadPenalties();
+      } catch (e) { fail(e); }
+    }
+  </script>
+</body>
+</html>

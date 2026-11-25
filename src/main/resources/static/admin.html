@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - 汽车租赁管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="nav" id="nav"></div>
+
+  <div class="container">
+    <h2 class="page-title">管理后台</h2>
+
+    <div class="tabs">
+      <button class="active" data-tab="vehicle" onclick="switchTab('vehicle')">车辆管理</button>
+      <button data-tab="order" onclick="switchTab('order')">订单管理</button>
+      <button data-tab="renewal" onclick="switchTab('renewal')">续租审核</button>
+      <button data-tab="return" onclick="switchTab('return')">归还审核 / 补费</button>
+      <button data-tab="complaint" onclick="switchTab('complaint')">投诉管理</button>
+      <button data-tab="service" onclick="switchTab('service')">客服回复</button>
+      <button data-tab="announcement" onclick="switchTab('announcement')">公告管理</button>
+    </div>
+
+    <!-- 车辆管理 -->
+    <div id="tab-vehicle">
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h3 style="margin:0">车辆列表</h3>
+          <div class="row">
+            <input id="type-name" placeholder="新增车型，如 越野车" style="width:180px">
+            <button class="btn gray" onclick="addType()">添加车型</button>
+            <button class="btn" onclick="openVehicleForm()">添加车辆</button>
+          </div>
+        </div>
+      </div>
+      <div class="card"><div id="vehicle-table"></div></div>
+    </div>
+
+    <!-- 订单管理 -->
+    <div id="tab-order" style="display:none">
+      <div class="card">
+        <div class="row">
+          <select id="order-status" onchange="loadAdminOrders()" style="width:160px">
+            <option value="">全部状态</option>
+            <option value="待支付">待支付</option>
+            <option value="已取车">已取车</option>
+            <option value="归还审核中">归还审核中</option>
+            <option value="已完成">已完成</option>
+          </select>
+          <button class="btn gray" onclick="loadAdminOrders()">刷新</button>
+        </div>
+      </div>
+      <div class="card"><div id="order-table"></div></div>
+    </div>
+
+    <!-- 续租审核 -->
+    <div id="tab-renewal" style="display:none">
+      <div class="card"><div id="renewal-table"></div></div>
+    </div>
+
+    <!-- 归还审核 -->
+    <div id="tab-return" style="display:none">
+      <div class="card"><h3>归还审核</h3><div id="return-table"></div></div>
+      <div class="card"><h3>补费记录</h3><div id="penalty-table"></div></div>
+    </div>
+
+    <!-- 投诉管理 -->
+    <div id="tab-complaint" style="display:none">
+      <div class="card"><div id="complaint-table"></div></div>
+    </div>
+
+    <!-- 客服回复 -->
+    <div id="tab-service" style="display:none">
+      <div class="card"><div id="service-table"></div></div>
+    </div>
+
+    <!-- 公告管理 -->
+    <div id="tab-announcement" style="display:none">
+      <div class="card">
+        <h3>发布公告</h3>
+        <div class="form-grid">
+          <label class="field full">标题
+            <input id="a-title" placeholder="公告标题">
+          </label>
+          <label class="field full">内容
+            <textarea id="a-content" placeholder="公告内容"></textarea>
+          </label>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn" onclick="addAnnouncement()">发布</button>
+        </div>
+      </div>
+      <div class="card"><div id="announcement-table"></div></div>
+    </div>
+  </div>
+
+  <!-- 车辆表单弹窗 -->
+  <div class="mask" id="modal-vehicle" onclick="if(event.target===this)closeModal('modal-vehicle')">
+    <div class="modal wide">
+      <h3 id="vehicle-form-title">添加车辆</h3>
+      <div class="form-grid">
+        <label class="field">车辆编号
+          <input id="v-no" placeholder="如 V007">
+        </label>
+        <label class="field">车辆名称
+          <input id="v-name" placeholder="如 宝马5系">
+        </label>
+        <label class="field">车型
+          <select id="v-type"></select>
+        </label>
+        <label class="field">车牌号
+          <input id="v-plate" placeholder="如 京A88888">
+        </label>
+        <label class="field">座位数
+          <input id="v-seats" type="number" min="1" value="5">
+        </label>
+        <label class="field">库存
+          <input id="v-stock" type="number" min="0" value="1">
+        </label>
+        <label class="field">日租价（元）
+          <input id="v-price" type="number" min="1" value="300">
+        </label>
+        <label class="field">出租状态
+          <select id="v-status">
+            <option value="可租">可租</option>
+            <option value="维修">维修</option>
+          </select>
+        </label>
+        <label class="field">品牌
+          <input id="v-brand" placeholder="如 宝马">
+        </label>
+        <label class="field">联系电话
+          <input id="v-phone" placeholder="联系电话">
+        </label>
+        <label class="field full">租车地址
+          <input id="v-address" placeholder="租车地址">
+        </label>
+        <label class="field full">车辆介绍
+          <textarea id="v-desc" placeholder="车辆介绍"></textarea>
+        </label>
+        <label class="field">车辆图片（可选，jpg/png）
+          <input id="v-image" type="file" accept=".jpg,.jpeg,.png">
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn gray" onclick="closeModal('modal-vehicle')">取消</button>
+        <button class="btn" onclick="saveVehicle()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 补费弹窗 -->
+  <div class="mask" id="modal-penalty" onclick="if(event.target===this)closeModal('modal-penalty')">
+    <div class="modal">
+      <h3>生成补费记录</h3>
+      <div class="form-grid">
+        <label class="field full">补费标题
+          <input id="p-title" placeholder="如 车辆破损赔付">
+        </label>
+        <label class="field">补费类型
+          <select id="p-type">
+            <option value="车辆破损">车辆破损</option>
+            <option value="油量超出">油量超出</option>
+            <option value="违章罚款">违章罚款</option>
+            <option value="超时归还">超时归还</option>
+          </select>
+        </label>
+        <label class="field">金额（元）
+          <input id="p-fee" type="number" min="1" value="100">
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn gray" onclick="closeModal('modal-penalty')">取消</button>
+        <button class="btn" onclick="savePenalty()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    if (!Auth.requireLogin()) throw new Error('未登录');
+    if (!Auth.user || Auth.user.role !== 'ADMIN') location.href = 'index.html';
+    renderNav('admin.html');
+
+    let types = [];
+    let editingVehicleId = null;
+    let currentImage = null;
+    let penaltyReturnId = null;
+
+    init();
+
+    async function init() {
+      await loadTypes();
+      switchTab('vehicle');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tabs button').forEach(b =>
+        b.className = b.dataset.tab === tab ? 'active' : '');
+      ['vehicle', 'order', 'renewal', 'return', 'complaint', 'service', 'announcement']
+        .forEach(t => document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none');
+      if (tab === 'vehicle') loadVehicles();
+      if (tab === 'order') loadAdminOrders();
+      if (tab === 'renewal') loadRenewals();
+      if (tab === 'return') { loadReturns(); loadPenalties(); }
+      if (tab === 'complaint') loadComplaints();
+      if (tab === 'service') loadService();
+      if (tab === 'announcement') loadAnnouncements();
+    }
+
+    async function loadTypes() {
+      try {
+        types = await api.get('/api/vehicle-types');
+        document.getElementById('v-type').innerHTML = types
+          .map(t => `<option value="${t.id}">${escapeHtml(t.typeName)}</option>`).join('');
+      } catch (e) { fail(e); }
+    }
+
+    async function addType() {
+      const input = document.getElementById('type-name');
+      const name = input.value.trim();
+      if (!name) return toast('请输入车型名称', true);
+      try {
+        await api.post('/api/admin/vehicle-types', { typeName: name });
+        input.value = '';
+        toast('车型添加成功');
+        await loadTypes();
+        loadVehicles();
+      } catch (e) { fail(e); }
+    }
+
+    /* ==================== 车辆管理 ==================== */
+    async function loadVehicles() {
+      try {
+        const list = await api.get('/api/vehicles');
+        const box = document.getElementById('vehicle-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无车辆</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>编号</th><th>名称</th><th>车型</th><th>车牌</th><th>座位</th><th>库存</th><th>日租价</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>${list.map(v => `<tr>
+            <td>${escapeHtml(v.vehicleNo)}</td>
+            <td>${escapeHtml(v.vehicleName)}</td>
+            <td>${escapeHtml(v.typeName || '-')}</td>
+            <td>${escapeHtml(v.plateNo || '-')}</td>
+            <td>${v.seats || '-'}</td>
+            <td>${v.stock}</td>
+            <td>${money(v.dailyPrice)}</td>
+            <td>${statusTag(v.status)}</td>
+            <td>
+              <button class="btn-link" onclick='editVehicle(${JSON.stringify(v)})'>编辑</button>
+              &nbsp;<button class="btn-link danger" onclick="deleteVehicle(${v.id})">删除</button>
+            </td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    function openVehicleForm() {
+      editingVehicleId = null;
+      currentImage = null;
+      document.getElementById('vehicle-form-title').textContent = '添加车辆';
+      ['v-no', 'v-name', 'v-plate', 'v-brand', 'v-phone', 'v-address', 'v-desc'].forEach(id =>
+        document.getElementById(id).value = '');
+      document.getElementById('v-seats').value = 5;
+      document.getElementById('v-stock').value = 1;
+      document.getElementById('v-price').value = 300;
+      document.getElementById('v-status').value = '可租';
+      document.getElementById('v-image').value = '';
+      openModal('modal-vehicle');
+    }
+
+    function editVehicle(v) {
+      editingVehicleId = v.id;
+      currentImage = v.image || null;
+      document.getElementById('vehicle-form-title').textContent = '编辑车辆';
+      document.getElementById('v-no').value = v.vehicleNo || '';
+      document.getElementById('v-name').value = v.vehicleName || '';
+      document.getElementById('v-type').value = v.typeId || '';
+      document.getElementById('v-plate').value = v.plateNo || '';
+      document.getElementById('v-seats').value = v.seats || 5;
+      document.getElementById('v-stock').value = v.stock || 0;
+      document.getElementById('v-price').value = v.dailyPrice || 0;
+      document.getElementById('v-status').value = v.status || '可租';
+      document.getElementById('v-brand').value = v.brand || '';
+      document.getElementById('v-phone').value = v.phone || '';
+      document.getElementById('v-address').value = v.address || '';
+      document.getElementById('v-desc').value = v.description || '';
+      document.getElementById('v-image').value = '';
+      openModal('modal-vehicle');
+    }
+
+    async function saveVehicle() {
+      const typeId = document.getElementById('v-type').value;
+      const body = {
+        vehicleNo: document.getElementById('v-no').value.trim(),
+        vehicleName: document.getElementById('v-name').value.trim(),
+        typeId: typeId ? Number(typeId) : null,
+        plateNo: document.getElementById('v-plate').value.trim() || null,
+        seats: Number(document.getElementById('v-seats').value || 0),
+        stock: Number(document.getElementById('v-stock').value || 0),
+        dailyPrice: Number(document.getElementById('v-price').value || 0),
+        status: document.getElementById('v-status').value,
+        brand: document.getElementById('v-brand').value.trim(),
+        phone: document.getElementById('v-phone').value.trim(),
+        address: document.getElementById('v-address').value.trim(),
+        description: document.getElementById('v-desc').value.trim(),
+        image: currentImage
+      };
+      if (!body.vehicleNo || !body.vehicleName) return toast('必填项不能为空', true);
+      try {
+        const file = document.getElementById('v-image').files[0];
+        if (file) {
+          const res = await api.upload(file);
+          body.image = res.url;
+        }
+        if (editingVehicleId) {
+          await api.put('/api/admin/vehicles/' + editingVehicleId, body);
+          toast('车辆信息已更新');
+        } else {
+          await api.post('/api/admin/vehicles', body);
+          toast('车辆添加成功');
+        }
+        closeModal('modal-vehicle');
+        loadVehicles();
+      } catch (e) { fail(e); }
+    }
+
+    async function deleteVehicle(id) {
+      if (!confirm('确认删除该车辆？')) return;
+      try {
+        await api.del('/api/admin/vehicles/' + id);
+        toast('车辆已删除');
+        loadVehicles();
+      } catch (e) { fail(e); }
+    }
+
+    /* ==================== 订单 ==================== */
+    async function loadAdminOrders() {
+      const status = document.getElementById('order-status').value;
+      try {
+        const list = await api.get('/api/admin/orders' + (status ? '?status=' + encodeURIComponent(status) : ''));
+        const box = document.getElementById('order-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无订单</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>车辆</th><th>租期</th><th>金额</th><th>取车时间</th><th>支付</th><th>状态</th><th>下单时间</th></tr></thead>
+          <tbody>${list.map(o => `<tr>
+            <td>${escapeHtml(o.orderNo)}</td>
+            <td>${escapeHtml(o.vehicleName)}</td>
+            <td>${o.rentDays} 天</td>
+            <td>${money(o.amount)}</td>
+            <td>${fmt(o.startTime)}</td>
+            <td>${escapeHtml(o.isPaid)}</td>
+            <td>${statusTag(o.status)}</td>
+            <td>${fmt(o.createTime)}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    /* ==================== 续租审核 ==================== */
+    async function loadRenewals() {
+      try {
+        const list = await api.get('/api/admin/renewals');
+        const box = document.getElementById('renewal-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无续租申请</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>车辆</th><th>续租天数</th><th>续租金额</th><th>申请时间</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>${list.map(r => `<tr>
+            <td>${escapeHtml(r.orderNo)}</td>
+            <td>${escapeHtml(r.vehicleName)}</td>
+            <td>${r.renewalDays} 天</td>
+            <td>${money(r.amount)}</td>
+            <td>${fmt(r.applyTime)}</td>
+            <td>${statusTag(r.auditStatus)}</td>
+            <td>${r.auditStatus === '待审核' ? `
+              <button class="btn sm" onclick="auditRenewal(${r.id}, true)">通过</button>
+              <button class="btn sm danger" onclick="auditRenewal(${r.id}, false)">不通过</button>`
+              : `<span class="muted">${escapeHtml(r.auditReply || '-')}</span>`}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function auditRenewal(id, pass) {
+      const reply = prompt(pass ? '请输入审核意见（可留空）' : '请输入不通过原因');
+      if (reply === null) return;
+      try {
+        await api.post(`/api/admin/renewals/${id}/audit`, { pass, reply });
+        toast('审核完成');
+        loadRenewals();
+      } catch (e) { fail(e); }
+    }
+
+    /* ==================== 归还审核 ==================== */
+    async function loadReturns() {
+      try {
+        const list = await api.get('/api/admin/returns');
+        const box = document.getElementById('return-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无归还记录</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>用户</th><th>车辆</th><th>归还时间</th><th>车况</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>${list.map(r => `<tr>
+            <td>${escapeHtml(r.orderNo)}</td>
+            <td>${escapeHtml(r.userName)}</td>
+            <td>${escapeHtml(r.vehicleName)}</td>
+            <td>${fmt(r.returnTime)}</td>
+            <td class="muted" style="font-size:12px">
+              破损:${escapeHtml(r.isDamaged)} 油量:${escapeHtml(r.isFuelExceed)} 违章:${escapeHtml(r.isViolation)}
+            </td>
+            <td>${statusTag(r.auditStatus)}</td>
+            <td>${r.auditStatus === '待审核' ? `
+              <button class="btn sm" onclick="auditReturn(${r.id}, true)">通过</button>
+              <button class="btn sm danger" onclick="auditReturn(${r.id}, false)">不通过</button>`
+              : r.auditStatus === '通过' ? `
+              <button class="btn sm gray" onclick="openPenalty(${r.id})">生成补费</button>
+              <span class="muted" style="font-size:12px">${escapeHtml(r.auditReply || '')}</span>`
+              : `<span class="muted">${escapeHtml(r.auditReply || '-')}</span>`}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function auditReturn(id, pass) {
+      const reply = prompt(pass ? '请输入审核意见（可留空）' : '请输入不通过原因');
+      if (reply === null) return;
+      try {
+        await api.post(`/api/admin/returns/${id}/audit`, { pass, reply });
+        toast('审核完成');
+        loadReturns();
+      } catch (e) { fail(e); }
+    }
+
+    function openPenalty(returnId) {
+      penaltyReturnId = returnId;
+      document.getElementById('p-title').value = '';
+      document.getElementById('p-fee').value = 100;
+      openModal('modal-penalty');
+    }
+
+    async function savePenalty() {
+      const body = {
+        returnId: penaltyReturnId,
+        title: document.getElementById('p-title').value.trim(),
+        type: document.getElementById('p-type').value,
+        fee: Number(document.getElementById('p-fee').value || 0)
+      };
+      if (!body.title) return toast('请填写补费标题', true);
+      try {
+        await api.post('/api/admin/penalties', body);
+        closeModal('modal-penalty');
+        toast('补费记录已生成');
+        loadPenalties();
+      } catch (e) { fail(e); }
+    }
+
+    async function loadPenalties() {
+      try {
+        const list = await api.get('/api/admin/penalties');
+        const box = document.getElementById('penalty-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无补费记录</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>订单编号</th><th>车辆</th><th>标题</th><th>类型</th><th>金额</th><th>状态</th><th>生成时间</th></tr></thead>
+          <tbody>${list.map(p => `<tr>
+            <td>${escapeHtml(p.orderNo)}</td>
+            <td>${escapeHtml(p.vehicleName)}</td>
+            <td>${escapeHtml(p.title)}</td>
+            <td>${escapeHtml(p.type || '-')}</td>
+            <td>${money(p.fee)}</td>
+            <td>${statusTag(p.isPaid)}</td>
+            <td>${fmt(p.createTime)}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    /* ==================== 投诉管理 ==================== */
+    async function loadComplaints() {
+      try {
+        const list = await api.get('/api/admin/complaints');
+        const box = document.getElementById('complaint-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无投诉</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>用户</th><th>标题</th><th>内容</th><th>提交时间</th><th>状态</th><th>回复</th></tr></thead>
+          <tbody>${list.map(c => `<tr>
+            <td>${escapeHtml(c.userName)}</td>
+            <td>${escapeHtml(c.title)}</td>
+            <td style="max-width:280px">${escapeHtml(c.content)}</td>
+            <td>${fmt(c.createTime)}</td>
+            <td>${statusTag(c.status)}</td>
+            <td>${c.status === '待处理'
+                ? `<button class="btn sm" onclick="replyComplaint(${c.id})">回复</button>`
+                : `<span class="muted" style="font-size:12px">${escapeHtml(c.reply || '-')}</span>`}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function replyComplaint(id) {
+      const reply = prompt('请输入回复内容');
+      if (reply === null || !reply.trim()) return;
+      try {
+        await api.post(`/api/admin/complaints/${id}/reply`, { reply });
+        toast('回复成功');
+        loadComplaints();
+      } catch (e) { fail(e); }
+    }
+
+    /* ==================== 客服回复 ==================== */
+    async function loadService() {
+      try {
+        const list = await api.get('/api/admin/service');
+        const box = document.getElementById('service-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无咨询</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>用户</th><th>咨询内容</th><th>提交时间</th><th>状态</th><th>回复</th></tr></thead>
+          <tbody>${list.map(s => `<tr>
+            <td>${escapeHtml(s.userName || '-')}</td>
+            <td style="max-width:300px">${escapeHtml(s.ask)}</td>
+            <td>${fmt(s.createTime)}</td>
+            <td>${s.isReply === 1 ? '<span class="tag green">已回复</span>' : '<span class="tag orange">待回复</span>'}</td>
+            <td>${s.isReply === 1
+                ? `<span class="muted" style="font-size:12px">${escapeHtml(s.reply || '')}</span>`
+                : `<button class="btn sm" onclick="replyService(${s.id})">回复</button>`}</td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function replyService(id) {
+      const reply = prompt('请输入回复内容');
+      if (reply === null || !reply.trim()) return;
+      try {
+        await api.post(`/api/admin/service/${id}/reply`, { reply });
+        toast('回复成功');
+        loadService();
+      } catch (e) { fail(e); }
+    }
+
+    /* ==================== 公告管理 ==================== */
+    async function loadAnnouncements() {
+      try {
+        const list = await api.get('/api/announcements');
+        const box = document.getElementById('announcement-table');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无公告</div>'; return; }
+        box.innerHTML = `<table>
+          <thead><tr><th>标题</th><th>内容</th><th>发布时间</th><th>操作</th></tr></thead>
+          <tbody>${list.map(a => `<tr>
+            <td>${escapeHtml(a.title)}</td>
+            <td style="max-width:420px">${escapeHtml(a.content || '')}</td>
+            <td>${fmt(a.createTime)}</td>
+            <td><button class="btn-link danger" onclick="deleteAnnouncement(${a.id})">删除</button></td>
+          </tr>`).join('')}</tbody></table>`;
+      } catch (e) { fail(e); }
+    }
+
+    async function addAnnouncement() {
+      const title = document.getElementById('a-title').value.trim();
+      const content = document.getElementById('a-content').value.trim();
+      if (!title) return toast('公告标题不能为空', true);
+      try {
+        await api.post('/api/admin/announcements', { title, content });
+        document.getElementById('a-title').value = '';
+        document.getElementById('a-content').value = '';
+        toast('公告已发布');
+        loadAnnouncements();
+      } catch (e) { fail(e); }
+    }
+
+    async function deleteAnnouncement(id) {
+      if (!confirm('确认删除该公告？')) return;
+      try {
+        await api.del('/api/admin/announcements/' + id);
+        toast('公告已删除');
+        loadAnnouncements();
+      } catch (e) { fail(e); }
+    }
+  </script>
+</body>
+</html>

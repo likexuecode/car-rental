@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 / 注册 - 汽车租赁管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-box">
+    <h1>汽车租赁管理系统</h1>
+    <p class="sub">在线选车 · 下单租赁 · 续租归还 · 客服反馈</p>
+
+    <div class="auth-tabs">
+      <button id="tab-login" class="active" onclick="switchTab('login')">登录</button>
+      <button id="tab-register" onclick="switchTab('register')">注册</button>
+    </div>
+
+    <!-- 登录 -->
+    <form id="form-login" onsubmit="doLogin(event)">
+      <label class="field">账号
+        <input id="login-account" placeholder="请输入账号" autocomplete="username">
+      </label>
+      <label class="field">密码
+        <input id="login-password" type="password" placeholder="请输入密码" autocomplete="current-password">
+      </label>
+      <button class="btn" type="submit">登 录</button>
+      <div class="auth-tip">管理员账号：admin / admin123<br>测试用户：test / 123456</div>
+    </form>
+
+    <!-- 注册 -->
+    <form id="form-register" style="display:none" onsubmit="doRegister(event)">
+      <label class="field">账号
+        <input id="reg-account" placeholder="请输入账号">
+      </label>
+      <label class="field">密码
+        <input id="reg-password" type="password" placeholder="密码至少6位">
+      </label>
+      <label class="field">确认密码
+        <input id="reg-confirm" type="password" placeholder="请再次输入密码">
+      </label>
+      <label class="field">姓名
+        <input id="reg-name" placeholder="请输入姓名">
+      </label>
+      <label class="field">手机号
+        <input id="reg-phone" placeholder="请输入11位手机号">
+      </label>
+      <label class="field">身份证号
+        <input id="reg-idcard" placeholder="请输入身份证号">
+      </label>
+      <button class="btn" type="submit">注 册</button>
+      <div class="auth-tip">注册成功后自动返回登录页</div>
+    </form>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    if (Auth.token) location.href = 'index.html';
+
+    function switchTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('tab-login').className = isLogin ? 'active' : '';
+      document.getElementById('tab-register').className = isLogin ? '' : 'active';
+      document.getElementById('form-login').style.display = isLogin ? '' : 'none';
+      document.getElementById('form-register').style.display = isLogin ? 'none' : '';
+    }
+
+    async function doLogin(e) {
+      e.preventDefault();
+      const account = document.getElementById('login-account').value.trim();
+      const password = document.getElementById('login-password').value;
+      if (!account || !password) return toast('请输入账号和密码', true);
+      try {
+        const data = await api.post('/api/auth/login', { account, password });
+        Auth.save(data);
+        toast('登录成功');
+        setTimeout(() => {
+          location.href = data.user.role === 'ADMIN' ? 'admin.html' : 'index.html';
+        }, 400);
+      } catch (err) {
+        fail(err);
+      }
+    }
+
+    async function doRegister(e) {
+      e.preventDefault();
+      const body = {
+        account: document.getElementById('reg-account').value.trim(),
+        password: document.getElementById('reg-password').value,
+        confirmPassword: document.getElementById('reg-confirm').value,
+        name: document.getElementById('reg-name').value.trim(),
+        phone: document.getElementById('reg-phone').value.trim(),
+        idCard: document.getElementById('reg-idcard').value.trim()
+      };
+      try {
+        await api.post('/api/auth/register', body);
+        toast('注册成功，请登录');
+        switchTab('login');
+        document.getElementById('login-account').value = body.account;
+        document.getElementById('form-register').reset();
+      } catch (err) {
+        fail(err);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>客服与公告 - 汽车租赁管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="nav" id="nav"></div>
+
+  <div class="container">
+    <h2 class="page-title">客服与公告</h2>
+
+    <div class="card">
+      <h3>提交投诉反馈</h3>
+      <div class="form-grid">
+        <label class="field full">投诉标题
+          <input id="c-title" placeholder="请简要描述问题">
+        </label>
+        <label class="field full">投诉内容
+          <textarea id="c-content" placeholder="请详细描述您遇到的问题"></textarea>
+        </label>
+        <label class="field">相关图片（可选，jpg/png，不超过2MB）
+          <input id="c-picture" type="file" accept=".jpg,.jpeg,.png">
+        </label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" onclick="submitComplaint()">提交反馈</button>
+        <span class="muted" id="upload-tip"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>我的投诉记录</h3>
+      <div id="complaint-list"></div>
+    </div>
+
+    <div class="card">
+      <h3>在线客服</h3>
+      <textarea id="s-ask" placeholder="请输入您的咨询内容，管理员会尽快回复"></textarea>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" onclick="ask()">发送咨询</button>
+        <button class="btn gray" onclick="loadService()">刷新</button>
+      </div>
+      <div id="service-list" style="margin-top:16px"></div>
+    </div>
+
+    <div class="card">
+      <h3>通知公告</h3>
+      <div id="notice-list"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    if (!Auth.requireLogin()) throw new Error('未登录');
+    renderNav('service.html');
+
+    loadComplaints();
+    loadService();
+    loadNotices();
+
+    async function submitComplaint() {
+      const title = document.getElementById('c-title').value.trim();
+      const content = document.getElementById('c-content').value.trim();
+      const fileInput = document.getElementById('c-picture');
+      if (!title || !content) return toast('请填写完整的投诉信息', true);
+      try {
+        let picture = null;
+        if (fileInput.files.length) {
+          document.getElementById('upload-tip').textContent = '图片上传中...';
+          const res = await api.upload(fileInput.files[0]);
+          picture = res.url;
+        }
+        await api.post('/api/complaints', { title, content, picture });
+        toast('提交成功，管理员将尽快处理');
+        document.getElementById('c-title').value = '';
+        document.getElementById('c-content').value = '';
+        fileInput.value = '';
+        document.getElementById('upload-tip').textContent = '';
+        loadComplaints();
+      } catch (e) {
+        document.getElementById('upload-tip').textContent = '';
+        fail(e);
+      }
+    }
+
+    async function loadComplaints() {
+      try {
+        const list = await api.get('/api/complaints/my');
+        const box = document.getElementById('complaint-list');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无投诉记录</div>'; return; }
+        box.innerHTML = list.map(c => `
+          <div style="border-bottom:1px solid #e5e7eb;padding:12px 0">
+            <div class="row" style="justify-content:space-between">
+              <strong>${escapeHtml(c.title)}</strong>
+              <span>${statusTag(c.status)} <span class="muted" style="font-size:12px">${fmt(c.createTime)}</span></span>
+            </div>
+            <p style="margin:6px 0;color:#374151">${escapeHtml(c.content)}</p>
+            ${c.picture ? `<img src="${escapeHtml(c.picture)}" style="max-width:180px;border-radius:8px">` : ''}
+            <p class="muted" style="margin:8px 0 0;font-size:13px">管理员回复：${escapeHtml(c.reply || '暂未回复')}</p>
+          </div>`).join('');
+      } catch (e) { fail(e); }
+    }
+
+    async function ask() {
+      const ask = document.getElementById('s-ask').value.trim();
+      if (!ask) return toast('请输入咨询内容', true);
+      try {
+        await api.post('/api/service/ask', { ask });
+        document.getElementById('s-ask').value = '';
+        toast('咨询已发送');
+        loadService();
+      } catch (e) { fail(e); }
+    }
+
+    async function loadService() {
+      try {
+        const list = await api.get('/api/service/my');
+        const box = document.getElementById('service-list');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无咨询记录</div>'; return; }
+        box.innerHTML = list.map(s => `
+          <div style="border-bottom:1px solid #e5e7eb;padding:10px 0">
+            <div><strong>我：</strong>${escapeHtml(s.ask)}</div>
+            <div class="muted" style="margin-top:4px">
+              客服回复：${s.isReply === 1 ? escapeHtml(s.reply) : '等待管理员回复...'}
+            </div>
+          </div>`).join('');
+      } catch (e) { fail(e); }
+    }
+
+    async function loadNotices() {
+      try {
+        const list = await api.get('/api/announcements');
+        const box = document.getElementById('notice-list');
+        if (!list.length) { box.innerHTML = '<div class="empty">暂无公告</div>'; return; }
+        box.innerHTML = list.map(n => `
+          <div style="border-bottom:1px solid #e5e7eb;padding:12px 0">
+            <strong>${escapeHtml(n.title)}</strong>
+            <div class="muted" style="font-size:12px">${fmt(n.createTime)}</div>
+            <p style="margin:6px 0 0;color:#374151">${escapeHtml(n.content || '')}</p>
+          </div>`).join('');
+      } catch (e) { fail(e); }
+    }
+  </script>
+</body>
+</html>

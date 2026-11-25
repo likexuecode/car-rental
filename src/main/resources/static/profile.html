@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人中心 - 汽车租赁管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="nav" id="nav"></div>
+
+  <div class="container">
+    <h2 class="page-title">个人中心</h2>
+
+    <div class="card">
+      <h3>账号信息</h3>
+      <div id="account-info"></div>
+    </div>
+
+    <div class="card">
+      <h3>修改个人信息</h3>
+      <div class="form-grid">
+        <label class="field">姓名
+          <input id="p-name">
+        </label>
+        <label class="field">手机号
+          <input id="p-phone">
+        </label>
+        <label class="field full">身份证号
+          <input id="p-idcard">
+        </label>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn" onclick="saveProfile()">保存修改</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    if (!Auth.requireLogin()) throw new Error('未登录');
+    renderNav('profile.html');
+    loadProfile();
+
+    async function loadProfile() {
+      try {
+        const u = await api.get('/api/auth/profile');
+        document.getElementById('account-info').innerHTML = `
+          <div class="detail-row"><span>账号</span><span>${escapeHtml(u.account)}</span></div>
+          <div class="detail-row"><span>姓名</span><span>${escapeHtml(u.name)}</span></div>
+          <div class="detail-row"><span>手机号</span><span>${escapeHtml(u.phone || '-')}</span></div>
+          <div class="detail-row"><span>身份证号</span><span>${escapeHtml(u.idCard || '-')}</span></div>
+          <div class="detail-row"><span>角色</span><span>${u.role === 'ADMIN' ? '管理员' : '普通用户'}</span></div>
+          <div class="detail-row"><span>注册时间</span><span>${fmt(u.createTime)}</span></div>`;
+        document.getElementById('p-name').value = u.name || '';
+        document.getElementById('p-phone').value = u.phone || '';
+        document.getElementById('p-idcard').value = u.idCard || '';
+      } catch (e) { fail(e); }
+    }
+
+    async function saveProfile() {
+      const name = document.getElementById('p-name').value.trim();
+      const phone = document.getElementById('p-phone').value.trim();
+      const idCard = document.getElementById('p-idcard').value.trim();
+      if (!name) return toast('姓名不能为空', true);
+      try {
+        await api.put('/api/auth/profile', { name, phone, idCard });
+        toast('个人信息已更新');
+        const user = Auth.user;
+        if (user) {
+          user.name = name;
+          localStorage.setItem('cr_user', JSON.stringify(user));
+          renderNav('profile.html');
+        }
+        loadProfile();
+      } catch (e) { fail(e); }
+    }
+  </script>
+</body>
+</html>
