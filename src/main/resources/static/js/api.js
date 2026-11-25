@@ -37,13 +37,16 @@ async function request(url, options = {}) {
   try {
     res = await fetch(url, opt);
   } catch (e) {
-    throw new Error('网络异常，请检查服务是否启动');
+    throw new Error('后端服务未部署，请稍后重试或联系管理员');
+  }
+  if (!res.ok) {
+    throw new Error('后端服务暂不可用（' + res.status + '），请稍后重试');
   }
   let data;
   try {
     data = await res.json();
   } catch (e) {
-    throw new Error('服务器响应异常');
+    throw new Error('后端返回异常响应，请稍后重试');
   }
   if (data.code === 401) {
     Auth.clear();

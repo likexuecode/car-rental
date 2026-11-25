@@ -101,7 +101,7 @@
             ${c.picture ? `<img src="${escapeHtml(c.picture)}" style="max-width:180px;border-radius:8px">` : ''}
             <p class="muted" style="margin:8px 0 0;font-size:13px">管理员回复：${escapeHtml(c.reply || '暂未回复')}</p>
           </div>`).join('');
-      } catch (e) { fail(e); }
+      } catch (e) { if (document.getElementById('complaint-list')) document.getElementById('complaint-list').innerHTML = '<div class="empty">无法加载投诉记录</div>'; }
     }
 
     async function ask() {
@@ -127,7 +127,7 @@
               客服回复：${s.isReply === 1 ? escapeHtml(s.reply) : '等待管理员回复...'}
             </div>
           </div>`).join('');
-      } catch (e) { fail(e); }
+      } catch (e) { if (document.getElementById('service-list')) document.getElementById('service-list').innerHTML = '<div class="empty">无法加载客服记录</div>'; }
     }
 
     async function loadNotices() {
@@ -141,7 +141,7 @@
             <div class="muted" style="font-size:12px">${fmt(n.createTime)}</div>
             <p style="margin:6px 0 0;color:#374151">${escapeHtml(n.content || '')}</p>
           </div>`).join('');
-      } catch (e) { fail(e); }
+      } catch (e) { if (document.getElementById('notice-list')) document.getElementById('notice-list').innerHTML = '<div class="empty">无法加载公告</div>'; }
     }
   </script>
 </body>

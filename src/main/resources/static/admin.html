@@ -214,7 +214,7 @@
         types = await api.get('/api/vehicle-types');
         document.getElementById('v-type').innerHTML = types
           .map(t => `<option value="${t.id}">${escapeHtml(t.typeName)}</option>`).join('');
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function addType() {
@@ -227,7 +227,7 @@
         toast('车型添加成功');
         await loadTypes();
         loadVehicles();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     /* ==================== 车辆管理 ==================== */
@@ -252,7 +252,7 @@
               &nbsp;<button class="btn-link danger" onclick="deleteVehicle(${v.id})">删除</button>
             </td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     function openVehicleForm() {
@@ -322,7 +322,7 @@
         }
         closeModal('modal-vehicle');
         loadVehicles();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function deleteVehicle(id) {
@@ -331,7 +331,7 @@
         await api.del('/api/admin/vehicles/' + id);
         toast('车辆已删除');
         loadVehicles();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     /* ==================== 订单 ==================== */
@@ -353,7 +353,7 @@
             <td>${statusTag(o.status)}</td>
             <td>${fmt(o.createTime)}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     /* ==================== 续租审核 ==================== */
@@ -376,7 +376,7 @@
               <button class="btn sm danger" onclick="auditRenewal(${r.id}, false)">不通过</button>`
               : `<span class="muted">${escapeHtml(r.auditReply || '-')}</span>`}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function auditRenewal(id, pass) {
@@ -386,7 +386,7 @@
         await api.post(`/api/admin/renewals/${id}/audit`, { pass, reply });
         toast('审核完成');
         loadRenewals();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     /* ==================== 归还审核 ==================== */
@@ -414,7 +414,7 @@
               <span class="muted" style="font-size:12px">${escapeHtml(r.auditReply || '')}</span>`
               : `<span class="muted">${escapeHtml(r.auditReply || '-')}</span>`}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function auditReturn(id, pass) {
@@ -424,7 +424,7 @@
         await api.post(`/api/admin/returns/${id}/audit`, { pass, reply });
         toast('审核完成');
         loadReturns();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     function openPenalty(returnId) {
@@ -447,7 +447,7 @@
         closeModal('modal-penalty');
         toast('补费记录已生成');
         loadPenalties();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function loadPenalties() {
@@ -466,7 +466,7 @@
             <td>${statusTag(p.isPaid)}</td>
             <td>${fmt(p.createTime)}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     /* ==================== 投诉管理 ==================== */
@@ -487,7 +487,7 @@
                 ? `<button class="btn sm" onclick="replyComplaint(${c.id})">回复</button>`
                 : `<span class="muted" style="font-size:12px">${escapeHtml(c.reply || '-')}</span>`}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function replyComplaint(id) {
@@ -497,7 +497,7 @@
         await api.post(`/api/admin/complaints/${id}/reply`, { reply });
         toast('回复成功');
         loadComplaints();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     /* ==================== 客服回复 ==================== */
@@ -517,7 +517,7 @@
                 ? `<span class="muted" style="font-size:12px">${escapeHtml(s.reply || '')}</span>`
                 : `<button class="btn sm" onclick="replyService(${s.id})">回复</button>`}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function replyService(id) {
@@ -527,7 +527,7 @@
         await api.post(`/api/admin/service/${id}/reply`, { reply });
         toast('回复成功');
         loadService();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     /* ==================== 公告管理 ==================== */
@@ -544,7 +544,7 @@
             <td>${fmt(a.createTime)}</td>
             <td><button class="btn-link danger" onclick="deleteAnnouncement(${a.id})">删除</button></td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function addAnnouncement() {
@@ -557,7 +557,7 @@
         document.getElementById('a-content').value = '';
         toast('公告已发布');
         loadAnnouncements();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
 
     async function deleteAnnouncement(id) {
@@ -566,7 +566,7 @@
         await api.del('/api/admin/announcements/' + id);
         toast('公告已删除');
         loadAnnouncements();
-      } catch (e) { fail(e); }
+      } catch (e) { /* silent */ }
     }
   </script>
 </body>

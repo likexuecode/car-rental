@@ -126,7 +126,8 @@
             </tr>`).join('')}
           </tbody></table>`;
       } catch (e) {
-        fail(e);
+        const box = document.getElementById('order-list');
+        if (box) box.innerHTML = '<div class="empty">当前无法加载订单数据</div>';
       }
     }
 
@@ -215,7 +216,7 @@
             <td>${statusTag(r.auditStatus)}</td>
             <td>${escapeHtml(r.auditReply || '-')}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { if (document.getElementById('renewal-list')) document.getElementById('renewal-list').innerHTML = '<div class="empty">无法加载续租数据</div>'; }
     }
 
     async function loadReturns() {
@@ -235,7 +236,7 @@
             <td>${statusTag(r.auditStatus)}</td>
             <td>${escapeHtml(r.auditReply || '-')}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { if (document.getElementById('return-list')) document.getElementById('return-list').innerHTML = '<div class="empty">无法加载归还数据</div>'; }
     }
 
     async function loadPenalties() {
@@ -256,7 +257,7 @@
                 ? `<button class="btn sm" onclick="payPenalty(${p.id})">支付补费</button>`
                 : '<span class="muted">-</span>'}</td>
           </tr>`).join('')}</tbody></table>`;
-      } catch (e) { fail(e); }
+      } catch (e) { if (document.getElementById('penalty-list')) document.getElementById('penalty-list').innerHTML = '<div class="empty">无法加载补费数据</div>'; }
     }
 
     async function payPenalty(id) {

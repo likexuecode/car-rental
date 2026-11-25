@@ -55,7 +55,7 @@
         document.getElementById('p-name').value = u.name || '';
         document.getElementById('p-phone').value = u.phone || '';
         document.getElementById('p-idcard').value = u.idCard || '';
-      } catch (e) { fail(e); }
+      } catch (e) { /* 页面加载静默处理 */ }
     }
 
     async function saveProfile() {
